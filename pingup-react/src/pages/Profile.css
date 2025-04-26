@@ -1,0 +1,187 @@
+.profile-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background-color: var(--gray-100);
+  padding: 20px;
+  padding-top: 100px;
+}
+
+.profile-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 40px;
+  width: 100%;
+  max-width: 800px;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.profile-header {
+  margin-bottom: 30px;
+  text-align: center;
+  border-bottom: 1px solid var(--gray-200);
+  padding-bottom: 20px;
+}
+
+.profile-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--black);
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.profile-header h2:after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 4px;
+  width: 70px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+
+.profile-email {
+  color: var(--gray-600);
+  font-size: 16px;
+  margin-top: 20px;
+}
+
+.profile-section {
+  margin-bottom: 30px;
+}
+
+.profile-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--black);
+  margin-bottom: 15px;
+  border-left: 4px solid var(--primary);
+  padding-left: 10px;
+}
+
+.role-badges {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.role-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+
+.role-badge.student {
+  background-color: rgba(102, 209, 196, 0.1);
+  color: var(--primary-dark);
+}
+
+.role-badge.tutor {
+  background-color: rgba(79, 70, 229, 0.1);
+  color: #4F46E5;
+}
+
+.role-badge .icon {
+  font-size: 20px;
+}
+
+.subject-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.subject-chip {
+  background: var(--blue-50);
+  color: var(--primary-dark);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 40px;
+  gap: 15px;
+}
+
+.profile-actions button {
+  flex: 1;
+  padding: 12px 0;
+  font-weight: 600;
+  border-radius: var(--radius);
+  transition: all 0.2s;
+  font-size: 16px;
+}
+
+.profile-card.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.loader {
+  width: 50px;
+  height: 50px;
+  border: 5px solid var(--gray-200);
+  border-top: 5px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.profile-card.error {
+  text-align: center;
+  padding: 40px;
+}
+
+.profile-card.error h2 {
+  color: #e53e3e;
+  margin-bottom: 20px;
+}
+
+.profile-card.error p {
+  margin-bottom: 30px;
+  color: var(--gray-600);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-card {
+    padding: 20px;
+  }
+  
+  .profile-actions {
+    flex-direction: column;
+  }
+  
+  .role-badges {
+    flex-direction: column;
+  }
+} 
