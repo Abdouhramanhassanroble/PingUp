@@ -4,14 +4,18 @@ import { auth, db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '../components/Navbar';
+import { FaUser, FaEdit } from 'react-icons/fa';
 import './Profile.css';
 
 interface UserData {
   uid: string;
   email: string;
+  displayName?: string;
   roles: string[];
   studentSubjects: string[];
   tutorSubjects: string[];
+  photoURL?: string;
+  bio?: string;
   createdAt: any;
   status: string;
 }
@@ -107,9 +111,20 @@ export default function Profile() {
       <Navbar />
       <div className="profile-container">
         <div className="profile-card">
-          <div className="profile-header">
-            <h2>Votre profil</h2>
-            <p className="profile-email">{userData.email}</p>
+          <div className="profile-header-with-photo">
+            <div className="profile-photo">
+              {userData.photoURL ? (
+                <img src={userData.photoURL} alt={userData.displayName || "Photo de profil"} />
+              ) : (
+                <div className="no-photo">
+                  <FaUser />
+                </div>
+              )}
+            </div>
+            <div className="profile-info">
+              <h2>{userData.displayName || "Utilisateur"}</h2>
+              <p className="profile-email">{userData.email}</p>
+            </div>
           </div>
 
           <div className="profile-section">
@@ -129,6 +144,15 @@ export default function Profile() {
               )}
             </div>
           </div>
+
+          {userData.bio && (
+            <div className="profile-section">
+              <h3>À propos de moi</h3>
+              <div className="profile-bio">
+                <p>{userData.bio}</p>
+              </div>
+            </div>
+          )}
 
           {userData.roles.includes('student') && userData.studentSubjects.length > 0 && (
             <div className="profile-section">
@@ -157,7 +181,12 @@ export default function Profile() {
           )}
 
           <div className="profile-actions">
-            <button className="btn-secondary">Modifier le profil</button>
+            <button 
+              className="btn-secondary"
+              onClick={() => navigate('/edit-profile')}
+            >
+              <FaEdit /> Modifier le profil
+            </button>
             {userData.roles.includes('student') && (
               <button className="btn-primary" onClick={() => navigate('/find-tutor')}>Trouver un tuteur</button>
             )}

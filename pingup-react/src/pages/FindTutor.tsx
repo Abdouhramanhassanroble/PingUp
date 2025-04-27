@@ -1,55 +1,120 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '../firebase';
 import Navbar from '../components/Navbar';
 import './FindTutor.css';
-import { FaStar, FaSearch } from 'react-icons/fa';
+import { FaStar, FaSearch, FaClock } from 'react-icons/fa';
 import { BiTimeFive } from 'react-icons/bi';
+
+interface TimeSlot {
+  day: string;
+  startTime: string;
+  endTime: string;
+}
+
+interface Tutor {
+  id: string;
+  displayName?: string;
+  email?: string;
+  roles?: string[];
+  tutorSubjects?: string[];
+  studentSubjects?: string[];
+  photoURL?: string;
+  status?: string;
+  availability?: TimeSlot[];
+}
 
 export default function FindTutor() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [subject, setSubject] = useState('');
   const [imageError, setImageError] = useState(false);
   // On utilise une image par défaut qui est garantie d'exister
   const [backgroundImage, setBackgroundImage] = useState('/BackgroundRecherche.jpg');
   
-  const [tutors, setTutors] = useState([
-    {
-      id: 1,
-      name: 'Marie D.',
-      subject: 'Mathématiques',
-      rating: 4.9,
-      sessions: 128,
-      price: 9,
-      bio: 'Docteure en mathématiques, spécialisée dans la résolution rapide de problèmes complexes.',
-      available: true,
-      image: '/tutor-1.jpg'
-    },
-    {
-      id: 2,
-      name: 'Thomas L.',
-      subject: 'Programmation',
-      rating: 5.0,
-      sessions: 93,
-      price: 12,
-      bio: 'Développeur senior avec 8 ans d\'expérience, résout vos bugs et problèmes de code en minutes.',
-      available: true,
-      image: '/tutor-2.jpg'
-    },
-    {
-      id: 3,
-      name: 'Sophie M.',
-      subject: 'Anglais & Espagnol',
-      rating: 4.8,
-      sessions: 75,
-      price: 8,
-      bio: 'Traductrice professionnelle, je corrige rapidement vos textes et vous aide avec les expressions difficiles.',
-      available: true,
-      image: '/tutor-3.jpg'
+  const [allTutors, setAllTutors] = useState<Tutor[]>([]);
+  const [filteredTutors, setFilteredTutors] = useState<Tutor[]>([]);
+  
+  // États pour les filtres de disponibilité
+  const [filterByAvailability, setFilterByAvailability] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string>(getCurrentDay());
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>(getCurrentTimeSlot());
+  
+  // Obtenir le jour actuel
+  function getCurrentDay(): string {
+    const days = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+    const dayIndex = new Date().getDay();
+    return days[dayIndex];
+  }
+  
+  // Obtenir le créneau horaire actuel arrondi à la demi-heure
+  function getCurrentTimeSlot(): string {
+    const now = new Date();
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+    const roundedMinutes = minutes < 30 ? "00" : "30";
+    return `${hour.toString().padStart(2, '0')}:${roundedMinutes}`;
+  }
+  
+  // Liste des jours pour le sélecteur
+  const days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+  
+  // Générer les créneaux horaires pour le sélecteur
+  const timeSlots = [];
+  for (let hour = 8; hour < 22; hour++) {
+    for (let min = 0; min < 60; min += 30) {
+      timeSlots.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
     }
-  ]);
+  }
+  timeSlots.push("22:00");
   
   useEffect(() => {
+    const fetchTutors = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        console.log("Tous les utilisateurs:", querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        
+        const tutorsData = querySnapshot.docs
+          .filter(doc => {
+            const data = doc.data();
+            console.log("Données utilisateur:", doc.id, data);
+            // Vérifier si roles existe et est un tableau qui inclut 'tutor'
+            return data.roles && Array.isArray(data.roles) && data.roles.includes('tutor');
+          })
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Tutor[];
+        
+        console.log("Tuteurs filtrés:", tutorsData);
+        
+        // Si aucun tuteur n'est trouvé, ajouter un tuteur de test
+        if (tutorsData.length === 0) {
+          tutorsData.push({
+            id: 'test-tutor-id',
+            displayName: 'Jean Dupont',
+            email: 'jean.dupont@example.com',
+            roles: ['tutor'],
+            tutorSubjects: ['Mathématiques', 'Physique'],
+            photoURL: 'https://randomuser.me/api/portraits/men/1.jpg',
+            status: 'active',
+            availability: [
+              { day: 'lundi', startTime: '18:00', endTime: '20:00' },
+              { day: 'mercredi', startTime: '14:00', endTime: '16:00' }
+            ]
+          });
+        }
+        
+        setAllTutors(tutorsData);
+        setFilteredTutors(tutorsData); // Initialement, afficher tous les tuteurs
+      } catch (error) {
+        console.error("Erreur lors de la récupération des tuteurs:", error);
+      }
+    };
+    
+    fetchTutors();
     // Test avec différents chemins pour trouver celui qui fonctionne
     const imagePaths = [
       '/backgroundBook.jpg',
@@ -81,10 +146,76 @@ export default function FindTutor() {
     if (subjectParam) setSubject(subjectParam);
   }, [location.search]);
   
+  // Vérifie si un tuteur est disponible pour un créneau spécifique
+  const isTutorAvailable = (tutor: Tutor, day: string, time: string): boolean => {
+    if (!tutor.availability || tutor.availability.length === 0) {
+      return false;
+    }
+    
+    return tutor.availability.some(slot => {
+      if (slot.day !== day) return false;
+      
+      // Vérifier si l'heure demandée est dans la plage de disponibilité
+      return slot.startTime <= time && time <= slot.endTime;
+    });
+  };
+  
+  // Fonction pour formater le jour en français avec majuscule
+  const formatDay = (day: string): string => {
+    return day.charAt(0).toUpperCase() + day.slice(1);
+  };
+  
+  // Fonction pour filtrer les tuteurs en fonction de la recherche et des disponibilités
+  const filterTutors = () => {
+    let results = [...allTutors];
+    
+    // Filtrer par matière si une matière est spécifiée
+    if (subject) {
+      const subjectLower = subject.toLowerCase();
+      results = results.filter(tutor => 
+        tutor.tutorSubjects && 
+        tutor.tutorSubjects.some(s => 
+          s.toLowerCase().includes(subjectLower)
+        )
+      );
+    }
+    
+    // Filtrer par question/recherche générale si spécifiée
+    if (searchQuery) {
+      const queryLower = searchQuery.toLowerCase();
+      results = results.filter(tutor => 
+        (tutor.displayName && tutor.displayName.toLowerCase().includes(queryLower)) ||
+        (tutor.email && tutor.email.toLowerCase().includes(queryLower)) ||
+        (tutor.tutorSubjects && tutor.tutorSubjects.some(s => s.toLowerCase().includes(queryLower)))
+      );
+    }
+    
+    // Filtrer par disponibilité si l'option est activée
+    if (filterByAvailability) {
+      results = results.filter(tutor => 
+        isTutorAvailable(tutor, selectedDay, selectedTimeSlot)
+      );
+    }
+    
+    setFilteredTutors(results);
+  };
+  
+  // Appliquer les filtres chaque fois que les critères changent
+  useEffect(() => {
+    filterTutors();
+  }, [searchQuery, subject, filterByAvailability, selectedDay, selectedTimeSlot, allTutors]);
+  
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Filtrage des tuteurs (simulation)
-    console.log("Recherche:", searchQuery, subject);
+    filterTutors();
+  };
+  
+  // Déterminer s'il faut afficher un message "Aucun tuteur trouvé"
+  const noTutorsFound = allTutors.length > 0 && filteredTutors.length === 0;
+  
+  // Fonction pour naviguer vers le profil du tuteur
+  const navigateToTutorProfile = (tutorId: string) => {
+    navigate(`/tutor-profile/${tutorId}`);
   };
   
   return (
@@ -132,10 +263,42 @@ export default function FindTutor() {
             <div className="search-filters">
               <div className="filter">
                 <label>
-                  <input type="checkbox" />
-                  Disponibles maintenant
+                  <input 
+                    type="checkbox" 
+                    checked={filterByAvailability}
+                    onChange={(e) => setFilterByAvailability(e.target.checked)}
+                  />
+                  Filtrer par disponibilité
                 </label>
               </div>
+              
+              {filterByAvailability && (
+                <div className="availability-filter">
+                  <div className="filter-select">
+                    <select 
+                      value={selectedDay}
+                      onChange={(e) => setSelectedDay(e.target.value)}
+                      className="time-select"
+                    >
+                      {days.map(day => (
+                        <option key={day} value={day}>{formatDay(day)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="filter-select">
+                    <select 
+                      value={selectedTimeSlot}
+                      onChange={(e) => setSelectedTimeSlot(e.target.value)}
+                      className="time-select"
+                    >
+                      {timeSlots.map((time, index) => (
+                        <option key={`time-${index}`} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
               
               <div className="filter">
                 <label>
@@ -156,35 +319,59 @@ export default function FindTutor() {
         </div>
         
         <div className="tutors-results">
-          <h2>{tutors.length} tuteurs disponibles</h2>
+          <h2>{filteredTutors.length} tuteurs disponibles</h2>
           
-          <div className="tutors-grid">
-            {tutors.map(tutor => (
-              <div key={tutor.id} className="tutor-card">
-                <div className="tutor-header">
-                  <span className="rating"><FaStar /> {tutor.rating}</span>
-                  <span className="sessions">{tutor.sessions} sessions</span>
+          {noTutorsFound ? (
+            <div className="no-results">
+              <h3>Aucun tuteur ne correspond à votre recherche</h3>
+              <p>Essayez de modifier vos critères de recherche ou d'explorer d'autres matières</p>
+            </div>
+          ) : (
+            <div className="tutors-grid">
+              {filteredTutors.map(tutor => (
+                <div key={tutor.id} className="tutor-card">
+                  <div className="tutor-header">
+                    <span className="rating"><FaStar /> 5.0</span> {/* Valeur par défaut */}
+                    <span className="sessions">50 sessions</span> {/* Valeur par défaut */}
+                  </div>
+
+                  <img src={tutor.photoURL || "/default-avatar.png"} alt={tutor.displayName || tutor.email || "Tuteur"} />
+                  <h3>{tutor.displayName || tutor.email || "Nom inconnu"}</h3>
+                  <p className="subject">{(tutor.tutorSubjects && tutor.tutorSubjects.join(", ")) || "Matière inconnue"}</p>
+                  <p className="price">Sur devis</p>
+                  <p className="bio">Disponible pour vous aider à progresser rapidement.</p>
+
+                  <div className="tutor-status">
+                    {tutor.availability && tutor.availability.length > 0 ? (
+                      isTutorAvailable(tutor, selectedDay, selectedTimeSlot) ? (
+                        <span className="status available">
+                          <BiTimeFive /> Disponible maintenant
+                        </span>
+                      ) : (
+                        <span className="status unavailable">
+                          <FaClock /> Disponibilités limitées
+                        </span>
+                      )
+                    ) : (
+                      <span className="status unavailable">
+                        <FaClock /> Planning non renseigné
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="tutor-actions">
+                    <button 
+                      className="btn-secondary" 
+                      onClick={() => navigateToTutorProfile(tutor.id)}
+                    >
+                      Voir le profil
+                    </button>
+                    <button className="btn-primary">Session de 15 min</button>
+                  </div>
                 </div>
-                
-                <img src={tutor.image} alt={tutor.name} />
-                <h3>{tutor.name}</h3>
-                <p className="subject">{tutor.subject}</p>
-                <p className="price">{tutor.price}€ / 15 min</p>
-                <p className="bio">{tutor.bio}</p>
-                
-                <div className="tutor-status">
-                  <span className="status available">
-                    <BiTimeFive /> Disponible maintenant
-                  </span>
-                </div>
-                
-                <div className="tutor-actions">
-                  <button className="btn-secondary">Voir le profil</button>
-                  <button className="btn-primary">Session de 15 min</button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>

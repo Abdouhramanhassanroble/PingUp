@@ -1,8 +1,10 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import '../App.css';
 import './Home.css';
-import { FaStar, FaGraduationCap, FaUsers, FaComment, FaCheck, FaHandshake, FaShieldAlt, FaClock } from 'react-icons/fa';
+import { FaStar, FaUsers, FaCheck, FaClock } from 'react-icons/fa';
 import { BiTimeFive } from 'react-icons/bi';
 import { MdSpeed, MdOutlineSchedule } from 'react-icons/md';
 

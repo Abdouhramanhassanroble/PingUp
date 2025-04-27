@@ -4,7 +4,7 @@ import { auth, db } from '../firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import "./Navbar.css";
-import { FaUserCircle, FaSearch, FaChalkboardTeacher, FaGraduationCap, FaBell } from 'react-icons/fa';
+import { FaUserCircle, FaSearch, FaChalkboardTeacher, FaGraduationCap, FaBell, FaBars, FaTimes } from 'react-icons/fa';
 
 interface UserData {
   roles?: string[];
@@ -15,6 +15,7 @@ export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const isHomePage = location.pathname === '/';
@@ -42,8 +43,11 @@ export default function Navbar() {
       }
     });
 
+    // Fermer le menu mobile lors du changement de route
+    setMobileMenuOpen(false);
+
     return () => unsubscribe();
-  }, []);
+  }, [location]);
 
   const handleLogout = async () => {
     try {
@@ -51,6 +55,7 @@ export default function Navbar() {
       setIsAuthenticated(false);
       setIsDropdownOpen(false);
       setUserData(null);
+      setMobileMenuOpen(false);
       navigate("/");
     } catch (error) {
       console.error("Erreur de déconnexion:", error);
@@ -59,6 +64,7 @@ export default function Navbar() {
 
   const handleProfileClick = () => {
     setIsDropdownOpen(false);
+    setMobileMenuOpen(false);
     navigate('/profile');
   };
 
@@ -73,6 +79,13 @@ export default function Navbar() {
       navigate(`/#${id}`);
     }
     setIsDropdownOpen(false);
+    setMobileMenuOpen(false);
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+    // Fermer le dropdown quand on ouvre/ferme le menu mobile
+    if (isDropdownOpen) setIsDropdownOpen(false);
   };
 
   return (
@@ -81,15 +94,19 @@ export default function Navbar() {
         <Link to="/" className="navbar-brand">
           <img src="/PingUpBlackLogo.jpg" alt="PingUp Logo" className="navbar-logo" />
         </Link>
+        
+        <button className="mobile-menu-toggle" onClick={toggleMobileMenu} aria-label="Toggle navigation menu">
+          {mobileMenuOpen ? <FaTimes /> : <FaBars />}
+        </button>
       </div>
 
-      <div className="navbar-right">
+      <div className={`navbar-right ${mobileMenuOpen ? 'mobile-menu-active' : ''}`}>
         {isAuthenticated ? (
           // Navigation pour utilisateurs connectés
-          <ul className="nav-links">
+          <ul className={`nav-links ${mobileMenuOpen ? 'mobile-active' : ''}`}>
             {userData?.roles?.includes('student') && (
               <li>
-                <Link to="/find-tutor" className="nav-link">
+                <Link to="/find-tutor" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
                   <FaSearch className="nav-icon" />
                   Trouver un tuteur
                 </Link>
@@ -97,7 +114,7 @@ export default function Navbar() {
             )}
             {userData?.roles?.includes('tutor') && (
               <li>
-                <Link to="/tutor-dashboard" className="nav-link">
+                <Link to="/tutor-dashboard" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
                   <FaChalkboardTeacher className="nav-icon" />
                   Espace tuteur
                 </Link>
@@ -105,14 +122,14 @@ export default function Navbar() {
             )}
             {userData?.roles?.includes('student') && (
               <li>
-                <Link to="/student-dashboard" className="nav-link">
+                <Link to="/student-dashboard" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
                   <FaGraduationCap className="nav-icon" />
                   Mes sessions
                 </Link>
               </li>
             )}
             <li>
-              <Link to="/notifications" className="nav-link">
+              <Link to="/notifications" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
                 <FaBell className="nav-icon" />
                 <span className="notification-badge">2</span>
               </Link>
@@ -120,9 +137,29 @@ export default function Navbar() {
           </ul>
         ) : (
           // Navigation pour visiteurs
-          <ul className="nav-links">
-            <li><a href="#services" onClick={(e) => { e.preventDefault(); scrollToSection('services'); }}>Nos services</a></li>
-            <li><a href="#about" onClick={(e) => { e.preventDefault(); scrollToSection('about'); }}>Qui sommes-nous</a></li>
+          <ul className={`nav-links ${mobileMenuOpen ? 'mobile-active' : ''}`}>
+            <li>
+              <a 
+                href="#services" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  scrollToSection('services'); 
+                }}
+              >
+                Nos services
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#about" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  scrollToSection('about'); 
+                }}
+              >
+                Qui sommes-nous
+              </a>
+            </li>
           </ul>
         )}
 
@@ -144,7 +181,7 @@ export default function Navbar() {
                     <span>{userData?.email}</span>
                   </div>
                   <button onClick={handleProfileClick} className="dropdown-item">Mon profil</button>
-                  <Link to="/settings" className="dropdown-item">Paramètres</Link>
+                  <Link to="/settings" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Paramètres</Link>
                   <div className="dropdown-divider"></div>
                   <button onClick={handleLogout} className="dropdown-item logout">Se déconnecter</button>
                 </div>
@@ -161,8 +198,8 @@ export default function Navbar() {
 
               {isDropdownOpen && (
                 <div className="dropdown-menu">
-                  <Link to="/register" className="dropdown-item">S'inscrire</Link>
-                  <Link to="/login" className="dropdown-item">Se connecter</Link>
+                  <Link to="/register" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>S'inscrire</Link>
+                  <Link to="/login" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Se connecter</Link>
                 </div>
               )}
             </>

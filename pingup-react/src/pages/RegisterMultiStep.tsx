@@ -1,27 +1,52 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import Navbar from '../components/Navbar';
 import './RegisterMultiStep.css';
+import { FaUser, FaUpload, FaCamera, FaClock } from 'react-icons/fa';
+
+interface TimeSlot {
+  day: string;
+  startTime: string;
+  endTime: string;
+}
 
 export default function RegisterMultiStep() {
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 7;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [roles, setRoles] = useState<string[]>([]);
   const [studentSubjects, setStudentSubjects] = useState<string[]>([]);
   const [tutorSubjects, setTutorSubjects] = useState<string[]>([]);
   const [newStudentSubject, setNewStudentSubject] = useState("");
   const [newTutorSubject, setNewTutorSubject] = useState("");
+  const [bio, setBio] = useState("");
+  const [photoURL, setPhotoURL] = useState("");
+  const [previewImage, setPreviewImage] = useState("");
+  const [availability, setAvailability] = useState<TimeSlot[]>([]);
+  const [selectedDay, setSelectedDay] = useState("lundi");
+  const [startTime, setStartTime] = useState("18:00");
+  const [endTime, setEndTime] = useState("20:00");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  const days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+  const timeSlots = [];
+  for (let hour = 8; hour < 22; hour++) {
+    for (let min = 0; min < 60; min += 30) {
+      timeSlots.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
+    }
+  }
+  timeSlots.push("22:00");
 
   const handleRegister = async () => {
     try {
@@ -34,9 +59,13 @@ export default function RegisterMultiStep() {
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         email,
+        displayName,
         roles,
         studentSubjects,
         tutorSubjects,
+        photoURL: photoURL || null,
+        bio: bio || null,
+        availability: roles.includes("tutor") ? availability : [],
         createdAt: new Date(),
         status: "active",
       });
@@ -61,9 +90,8 @@ export default function RegisterMultiStep() {
   };
 
   const handleNext = () => {
-    // Validation par étape
     if (currentStep === 1) {
-      if (!email || !password || !confirmPassword) {
+      if (!displayName || !email || !password || !confirmPassword) {
         setError("Veuillez remplir tous les champs");
         return;
       }
@@ -87,6 +115,17 @@ export default function RegisterMultiStep() {
       }
       if (roles.includes("tutor") && tutorSubjects.length === 0) {
         setError("Veuillez ajouter au moins une matière en tant que tuteur");
+        return;
+      }
+    } else if (currentStep === 4 && roles.includes("tutor")) {
+      if (availability.length === 0) {
+        setError("Veuillez ajouter au moins une plage de disponibilité");
+        return;
+      }
+    } else if (currentStep === 5) {
+    } else if (currentStep === 6) {
+      if (bio.length < 40) {
+        setError("Votre bio doit contenir au moins 40 caractères");
         return;
       }
     }
@@ -119,6 +158,71 @@ export default function RegisterMultiStep() {
     setTutorSubjects(tutorSubjects.filter(s => s !== subject));
   };
 
+  const addTimeSlot = () => {
+    if (startTime >= endTime) {
+      setError("L'heure de fin doit être postérieure à l'heure de début");
+      return;
+    }
+
+    const newSlot: TimeSlot = {
+      day: selectedDay,
+      startTime,
+      endTime
+    };
+
+    // Vérifier si un créneau avec le même jour existe déjà
+    const hasOverlap = availability.some(slot => {
+      if (slot.day !== selectedDay) return false;
+      
+      // Vérifier le chevauchement des créneaux
+      const slotStart = slot.startTime;
+      const slotEnd = slot.endTime;
+      
+      return (startTime < slotEnd && endTime > slotStart);
+    });
+
+    if (hasOverlap) {
+      setError("Ce créneau chevauche un créneau existant");
+      return;
+    }
+
+    setAvailability([...availability, newSlot]);
+    setError("");
+  };
+
+  const removeTimeSlot = (index: number) => {
+    const newAvailability = [...availability];
+    newAvailability.splice(index, 1);
+    setAvailability(newAvailability);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setPreviewImage(result);
+        setPhotoURL(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Pour formater l'affichage des jours en français
+  const formatDay = (day: string): string => {
+    return day.charAt(0).toUpperCase() + day.slice(1);
+  };
+
+  // Pour formater l'heure en format lisible
+  const formatTimeSlot = (slot: TimeSlot): string => {
+    return `${formatDay(slot.day)}, ${slot.startTime} - ${slot.endTime}`;
+  };
+
   return (
     <>
       <Navbar />
@@ -137,9 +241,19 @@ export default function RegisterMultiStep() {
 
           {error && <div className="error-message">{error}</div>}
 
-          {/* Étape 1: Informations de compte */}
           {currentStep === 1 && (
             <div>
+              <div className="form-group">
+                <label htmlFor="displayName">Nom complet</label>
+                <input
+                  id="displayName"
+                  type="text"
+                  placeholder="Votre nom complet"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  required
+                />
+              </div>
               <div className="form-group">
                 <label htmlFor="email">Adresse email</label>
                 <input
@@ -176,7 +290,6 @@ export default function RegisterMultiStep() {
             </div>
           )}
 
-          {/* Étape 2: Choix du rôle */}
           {currentStep === 2 && (
             <div>
               <h3>Quel est votre rôle ?</h3>
@@ -212,7 +325,6 @@ export default function RegisterMultiStep() {
             </div>
           )}
 
-          {/* Étape 3: Choix des matières */}
           {currentStep === 3 && (
             <div>
               <h3>Choisissez vos matières</h3>
@@ -269,16 +381,181 @@ export default function RegisterMultiStep() {
             </div>
           )}
 
-          {/* Étape 4: Récapitulatif */}
-          {currentStep === 4 && (
+          {currentStep === 4 && roles.includes("tutor") && (
+            <div>
+              <h3>
+                <FaClock style={{ marginRight: '10px' }} />
+                Définissez vos disponibilités
+              </h3>
+              <p>Ajoutez les créneaux horaires durant lesquels vous êtes disponible pour donner des cours</p>
+              
+              <div className="availability-form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="day-select">Jour</label>
+                    <select 
+                      id="day-select" 
+                      value={selectedDay} 
+                      onChange={(e) => setSelectedDay(e.target.value)}
+                      className="time-select"
+                    >
+                      {days.map(day => (
+                        <option key={day} value={day}>{formatDay(day)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="start-time">De</label>
+                    <select 
+                      id="start-time" 
+                      value={startTime} 
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="time-select"
+                    >
+                      {timeSlots.map((time, index) => (
+                        <option key={`start-${index}`} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="end-time">À</label>
+                    <select 
+                      id="end-time" 
+                      value={endTime} 
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="time-select"
+                    >
+                      {timeSlots.map((time, index) => (
+                        <option key={`end-${index}`} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <button 
+                    type="button" 
+                    className="btn-add-time" 
+                    onClick={addTimeSlot}
+                  >
+                    Ajouter
+                  </button>
+                </div>
+              </div>
+              
+              <div className="time-slots-container">
+                <h4>Créneaux ajoutés</h4>
+                {availability.length === 0 ? (
+                  <p className="no-slots">Aucun créneau ajouté</p>
+                ) : (
+                  <div className="time-slots-list">
+                    {availability.map((slot, index) => (
+                      <div key={index} className="time-slot-item">
+                        <div className="time-slot-info">
+                          <span className="day-label">{formatDay(slot.day)}</span>
+                          <span className="time-range">{slot.startTime} - {slot.endTime}</span>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => removeTimeSlot(index)} 
+                          className="remove-slot-btn"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {currentStep === 5 && (
+            <div>
+              <h3>Ajoutez une photo de profil</h3>
+              <p>Cela aidera les autres utilisateurs à vous reconnaître</p>
+              
+              <div className="photo-upload-container">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  style={{ display: 'none' }} 
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                />
+                
+                {previewImage ? (
+                  <div className="preview-photo">
+                    <img src={previewImage} alt="Aperçu" />
+                    <button type="button" className="change-photo" onClick={triggerFileInput}>
+                      <FaCamera /> Changer
+                    </button>
+                  </div>
+                ) : (
+                  <div className="upload-placeholder" onClick={triggerFileInput}>
+                    <FaUser className="user-icon" />
+                    <div className="upload-prompt">
+                      <FaUpload />
+                      <span>Cliquez pour ajouter une photo</span>
+                    </div>
+                  </div>
+                )}
+                
+                <p className="photo-info">
+                  Formats acceptés: JPG, PNG. Taille maximale: 5MB
+                </p>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 6 && (
+            <div>
+              <h3>Présentez-vous</h3>
+              <p>Partagez quelques informations sur vous (minimum 40 caractères)</p>
+              
+              <div className="form-group">
+                <textarea
+                  placeholder="Parlez de votre expérience, vos compétences, votre parcours..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={5}
+                  className="bio-textarea"
+                ></textarea>
+                <div className="character-count">
+                  {bio.length} / 40 caractères minimum
+                  {bio.length < 40 && (
+                    <span className="character-warning">
+                      (encore {40 - bio.length} caractères nécessaires)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 7 && (
             <div>
               <h3>Récapitulatif</h3>
-              <div className="summary-item">
-                <strong>Email :</strong> {email}
+              <div className="profile-summary">
+                {previewImage && (
+                  <div className="summary-photo">
+                    <img src={previewImage} alt={displayName} />
+                  </div>
+                )}
+                
+                <div className="summary-info">
+                  <div className="summary-item">
+                    <strong>Nom :</strong> {displayName}
+                  </div>
+                  <div className="summary-item">
+                    <strong>Email :</strong> {email}
+                  </div>
+                  <div className="summary-item">
+                    <strong>Rôles :</strong> {roles.map(role => role === 'student' ? 'Étudiant' : 'Tuteur').join(", ")}
+                  </div>
+                </div>
               </div>
-              <div className="summary-item">
-                <strong>Rôles :</strong> {roles.map(role => role === 'student' ? 'Étudiant' : 'Tuteur').join(", ")}
-              </div>
+              
               {roles.includes("student") && (
                 <div className="summary-item">
                   <strong>Matières en tant qu'étudiant :</strong> 
@@ -289,14 +566,39 @@ export default function RegisterMultiStep() {
                   </div>
                 </div>
               )}
+              
               {roles.includes("tutor") && (
-                <div className="summary-item">
-                  <strong>Matières en tant que tuteur :</strong>
-                  <div className="subject-chips">
-                    {tutorSubjects.map(subject => (
-                      <div key={subject} className="subject-chip">{subject}</div>
-                    ))}
+                <>
+                  <div className="summary-item">
+                    <strong>Matières en tant que tuteur :</strong>
+                    <div className="subject-chips">
+                      {tutorSubjects.map(subject => (
+                        <div key={subject} className="subject-chip">{subject}</div>
+                      ))}
+                    </div>
                   </div>
+                  
+                  <div className="summary-item">
+                    <strong>Disponibilités :</strong>
+                    {availability.length > 0 ? (
+                      <div className="availability-summary">
+                        {availability.map((slot, index) => (
+                          <div key={index} className="availability-item">
+                            {formatTimeSlot(slot)}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>Aucune disponibilité définie</p>
+                    )}
+                  </div>
+                </>
+              )}
+              
+              {bio && (
+                <div className="summary-item bio-summary">
+                  <strong>À propos de vous :</strong>
+                  <p>{bio}</p>
                 </div>
               )}
             </div>
