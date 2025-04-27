@@ -23,6 +23,9 @@ interface Tutor {
   status?: string;
   bio?: string;
   availability?: TimeSlot[];
+  price15min?: number;
+  price30min?: number;
+  priceHour?: number;
 }
 
 export default function TutorProfile() {
@@ -31,8 +34,8 @@ export default function TutorProfile() {
   const [tutor, setTutor] = useState<Tutor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentDay, setCurrentDay] = useState<string>(getCurrentDay());
-  const [currentTime, setCurrentTime] = useState<string>(getCurrentTimeSlot());
+  const currentDay = getCurrentDay();
+  const currentTime = getCurrentTimeSlot();
 
   // Obtenir le jour actuel
   function getCurrentDay(): string {
@@ -219,14 +222,54 @@ export default function TutorProfile() {
 
           <div className="session-booking">
             <h2>Réserver une session</h2>
-            <div className="session-details">
-              <div className="price">
-                <span className="amount">Sur devis</span>
-                <span className="per">/ 15 minutes</span>
-              </div>
-              <button className="btn-book" disabled={!isAvailableNow}>
-                {isAvailableNow ? "Démarrer une session" : "Non disponible"}
-              </button>
+            <div className="pricing-options">
+              {tutor.price15min ? (
+                <div className="pricing-option">
+                  <div className="price">
+                    <span className="amount">{tutor.price15min}€</span>
+                    <span className="per">/ 15 minutes</span>
+                  </div>
+                  <button className="btn-book" disabled={!isAvailableNow}>
+                    {isAvailableNow ? "Réserver 15 min" : "Non disponible"}
+                  </button>
+                </div>
+              ) : null}
+              
+              {tutor.price30min ? (
+                <div className="pricing-option">
+                  <div className="price">
+                    <span className="amount">{tutor.price30min}€</span>
+                    <span className="per">/ 30 minutes</span>
+                  </div>
+                  <button className="btn-book" disabled={!isAvailableNow}>
+                    {isAvailableNow ? "Réserver 30 min" : "Non disponible"}
+                  </button>
+                </div>
+              ) : null}
+              
+              {tutor.priceHour ? (
+                <div className="pricing-option">
+                  <div className="price">
+                    <span className="amount">{tutor.priceHour}€</span>
+                    <span className="per">/ 1 heure</span>
+                  </div>
+                  <button className="btn-book" disabled={!isAvailableNow}>
+                    {isAvailableNow ? "Réserver 1h" : "Non disponible"}
+                  </button>
+                </div>
+              ) : null}
+              
+              {!tutor.price15min && !tutor.price30min && !tutor.priceHour && (
+                <div className="pricing-option">
+                  <div className="price">
+                    <span className="amount">Sur devis</span>
+                    <span className="per">Contactez le tuteur</span>
+                  </div>
+                  <button className="btn-book" disabled={!isAvailableNow}>
+                    {isAvailableNow ? "Contacter" : "Non disponible"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore'
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '../components/Navbar';
 import './FindTutor.css';
 import { FaStar, FaSearch, FaClock } from 'react-icons/fa';
@@ -23,6 +24,9 @@ interface Tutor {
   photoURL?: string;
   status?: string;
   availability?: TimeSlot[];
+  price15min?: number;
+  price30min?: number;
+  priceHour?: number;
 }
 
 export default function FindTutor() {
@@ -30,17 +34,18 @@ export default function FindTutor() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [subject, setSubject] = useState('');
-  const [imageError, setImageError] = useState(false);
-  // On utilise une image par défaut qui est garantie d'exister
-  const [backgroundImage, setBackgroundImage] = useState('/BackgroundRecherche.jpg');
+  // Nous n'avons plus besoin des états pour l'image puisque nous utilisons un dégradé CSS
   
   const [allTutors, setAllTutors] = useState<Tutor[]>([]);
   const [filteredTutors, setFilteredTutors] = useState<Tutor[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   
   // États pour les filtres de disponibilité
-  const [filterByAvailability, setFilterByAvailability] = useState(false);
+  const [filterByAvailability, setFilterByAvailability] = useState(true);
   const [selectedDay, setSelectedDay] = useState<string>(getCurrentDay());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>(getCurrentTimeSlot());
+  const [priceSort, setPriceSort] = useState<string>("");
   
   // Obtenir le jour actuel
   function getCurrentDay(): string {
@@ -100,6 +105,9 @@ export default function FindTutor() {
             tutorSubjects: ['Mathématiques', 'Physique'],
             photoURL: 'https://randomuser.me/api/portraits/men/1.jpg',
             status: 'active',
+            price15min: 9.99,
+            price30min: 18.99,
+            priceHour: 34.99,
             availability: [
               { day: 'lundi', startTime: '18:00', endTime: '20:00' },
               { day: 'mercredi', startTime: '14:00', endTime: '16:00' }
@@ -115,27 +123,6 @@ export default function FindTutor() {
     };
     
     fetchTutors();
-    // Test avec différents chemins pour trouver celui qui fonctionne
-    const imagePaths = [
-      '/backgroundBook.jpg',
-      './backgroundBook.jpg',
-      '/BackgroundRecherche.jpg' // une autre image qui existe sûrement
-    ];
-    
-    // Fonction pour tester si une image peut être chargée
-    const checkImage = (path: string) => {
-      const img = new Image();
-      img.onload = () => {
-        console.log('Image chargée avec succès:', path);
-        setBackgroundImage(path);
-        setImageError(false);
-      };
-      img.onerror = () => console.error('Échec de chargement:', path);
-      img.src = path;
-    };
-    
-    // Essayer tous les chemins
-    imagePaths.forEach(checkImage);
     
     // Récupérer les paramètres de l'URL
     const params = new URLSearchParams(location.search);
@@ -146,6 +133,19 @@ export default function FindTutor() {
     if (subjectParam) setSubject(subjectParam);
   }, [location.search]);
   
+  // Vérifier si l'utilisateur est connecté
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+    });
+    
+    return () => unsubscribe();
+  }, []);
+  
   // Vérifie si un tuteur est disponible pour un créneau spécifique
   const isTutorAvailable = (tutor: Tutor, day: string, time: string): boolean => {
     if (!tutor.availability || tutor.availability.length === 0) {
@@ -153,11 +153,22 @@ export default function FindTutor() {
     }
     
     return tutor.availability.some(slot => {
-      if (slot.day !== day) return false;
+      if (slot.day.toLowerCase() !== day.toLowerCase()) return false;
+      
+      // Convertir les heures en minutes pour faciliter la comparaison
+      const requestedTime = convertTimeToMinutes(time);
+      const startTime = convertTimeToMinutes(slot.startTime);
+      const endTime = convertTimeToMinutes(slot.endTime);
       
       // Vérifier si l'heure demandée est dans la plage de disponibilité
-      return slot.startTime <= time && time <= slot.endTime;
+      return startTime <= requestedTime && requestedTime <= endTime;
     });
+  };
+  
+  // Fonction utilitaire pour convertir l'heure au format "HH:MM" en minutes
+  const convertTimeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
   };
   
   // Fonction pour formater le jour en français avec majuscule
@@ -197,13 +208,28 @@ export default function FindTutor() {
       );
     }
     
+    // Trier par prix si un tri est sélectionné
+    if (priceSort) {
+      results.sort((a, b) => {
+        // Utiliser le prix de 15 minutes pour le tri, ou le prix de 30 min ou 1 heure si non disponible
+        const priceA = a.price15min || a.price30min || a.priceHour || Number.MAX_VALUE;
+        const priceB = b.price15min || b.price30min || b.priceHour || Number.MAX_VALUE;
+        
+        if (priceSort === 'low') {
+          return priceA - priceB; // Prix croissant
+        } else {
+          return priceB - priceA; // Prix décroissant
+        }
+      });
+    }
+    
     setFilteredTutors(results);
   };
   
   // Appliquer les filtres chaque fois que les critères changent
   useEffect(() => {
     filterTutors();
-  }, [searchQuery, subject, filterByAvailability, selectedDay, selectedTimeSlot, allTutors]);
+  }, [searchQuery, subject, filterByAvailability, selectedDay, selectedTimeSlot, priceSort, allTutors]);
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,20 +244,34 @@ export default function FindTutor() {
     navigate(`/tutor-profile/${tutorId}`);
   };
   
+  // Gérer la réservation d'une session
+  const handleBookSession = (tutorId: string, sessionPrice: number | undefined) => {
+    if (!isAuthenticated) {
+      // Rediriger vers la page de connexion
+      navigate('/login', { 
+        state: { 
+          returnUrl: `/find-tutor${location.search}`,
+          tutorId: tutorId,
+          sessionType: '15min',
+          sessionPrice: sessionPrice
+        } 
+      });
+    } else {
+      // Procéder à la réservation
+      navigate(`/book-session/${tutorId}`, {
+        state: {
+          sessionType: '15min',
+          sessionPrice: sessionPrice
+        }
+      });
+    }
+  };
+  
   return (
     <>
       <Navbar />
       
       <div className="find-tutor-page">
-        <div 
-          className={`background-image ${imageError ? 'fallback' : ''}`}
-          style={{
-            backgroundImage: `url(${backgroundImage})`
-          }}
-        >
-          <div className="overlay"></div>
-        </div>
-        
         <div className="search-header">
           <h1>Trouver un tuteur</h1>
           <p>Des experts disponibles immédiatement pour des sessions de 15 minutes</p>
@@ -308,8 +348,11 @@ export default function FindTutor() {
               </div>
               
               <div className="filter">
-                <select>
-                  <option value="">Prix</option>
+                <select 
+                  value={priceSort}
+                  onChange={(e) => setPriceSort(e.target.value)}
+                >
+                  <option value="">Prix (Tous)</option>
                   <option value="low">Prix croissant</option>
                   <option value="high">Prix décroissant</option>
                 </select>
@@ -338,7 +381,25 @@ export default function FindTutor() {
                   <img src={tutor.photoURL || "/default-avatar.png"} alt={tutor.displayName || tutor.email || "Tuteur"} />
                   <h3>{tutor.displayName || tutor.email || "Nom inconnu"}</h3>
                   <p className="subject">{(tutor.tutorSubjects && tutor.tutorSubjects.join(", ")) || "Matière inconnue"}</p>
-                  <p className="price">Sur devis</p>
+                  
+                  <div className="prices">
+                    {tutor.price15min ? (
+                      <p className="price primary-price">{tutor.price15min}€ <span>/15min</span></p>
+                    ) : null}
+                    
+                    {tutor.price30min ? (
+                      <p className="price">{tutor.price30min}€ <span>/30min</span></p>
+                    ) : null}
+                    
+                    {tutor.priceHour ? (
+                      <p className="price">{tutor.priceHour}€ <span>/heure</span></p>
+                    ) : null}
+                    
+                    {!tutor.price15min && !tutor.price30min && !tutor.priceHour && (
+                      <p className="price">Sur devis</p>
+                    )}
+                  </div>
+                  
                   <p className="bio">Disponible pour vous aider à progresser rapidement.</p>
 
                   <div className="tutor-status">
@@ -349,7 +410,9 @@ export default function FindTutor() {
                         </span>
                       ) : (
                         <span className="status unavailable">
-                          <FaClock /> Disponibilités limitées
+                          <FaClock /> {tutor.availability.some(slot => slot.day.toLowerCase() === selectedDay.toLowerCase()) ? 
+                            `Disponible à d'autres heures ${formatDay(selectedDay).toLowerCase()}` : 
+                            `Non disponible ${formatDay(selectedDay).toLowerCase()}`}
                         </span>
                       )
                     ) : (
@@ -366,7 +429,12 @@ export default function FindTutor() {
                     >
                       Voir le profil
                     </button>
-                    <button className="btn-primary">Session de 15 min</button>
+                    <button 
+                      className="btn-primary" 
+                      onClick={() => handleBookSession(tutor.id, tutor.price15min)}
+                    >
+                      {tutor.price15min ? `${tutor.price15min}€ - 15 min` : "Session de 15 min"}
+                    </button>
                   </div>
                 </div>
               ))}

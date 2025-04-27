@@ -122,9 +122,9 @@ export default function Navbar() {
             )}
             {userData?.roles?.includes('student') && (
               <li>
-                <Link to="/student-dashboard" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
+                <Link to="/dashboard" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
                   <FaGraduationCap className="nav-icon" />
-                  Mes sessions
+                  Tableau de bord
                 </Link>
               </li>
             )}

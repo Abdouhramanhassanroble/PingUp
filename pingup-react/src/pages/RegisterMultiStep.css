@@ -544,4 +544,48 @@
   color: var(--gray-700);
   font-size: 14px;
   border-left: 3px solid var(--primary);
+}
+
+.pricing-form {
+  background-color: var(--gray-50);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.price-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.price-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(102, 209, 196, 0.2);
+}
+
+.pricing-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.price-item {
+  background-color: var(--gray-50);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+
+.availability-item {
+  background-color: var(--purple-50);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  font-size: 14px;
 } 

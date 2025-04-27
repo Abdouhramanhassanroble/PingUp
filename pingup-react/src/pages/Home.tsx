@@ -9,27 +9,7 @@ import { BiTimeFive } from 'react-icons/bi';
 import { MdSpeed, MdOutlineSchedule } from 'react-icons/md';
 
 export default function Home() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [subject, setSubject] = useState('');
-  const [searchBgError, setSearchBgError] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Vérifier si l'image de fond du moteur de recherche se charge correctement
-    const img = new Image();
-    img.src = '/backgroundBook.jpg';
-    img.onload = () => setSearchBgError(false);
-    img.onerror = () => {
-      console.error('Erreur de chargement de l\'image de fond du moteur de recherche');
-      setSearchBgError(true);
-    };
-  }, []);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Rediriger vers la page de recherche avec les paramètres
-    navigate(`/find-tutor?query=${encodeURIComponent(searchQuery)}&subject=${encodeURIComponent(subject)}`);
-  };
 
   return (
     <>
@@ -68,27 +48,18 @@ export default function Home() {
         <div className="hero-content">
           <h1>Des réponses en 15 minutes chrono</h1>
           <p>Résolvez vos problèmes rapidement avec des tuteurs experts disponibles à la demande</p>
-          <div className={`search-container ${searchBgError ? 'search-bg-fallback' : ''}`}>
-            <form onSubmit={handleSearch} className="search-bar">
-              <input 
-                type="text" 
-                placeholder="Quelle est votre question ?" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <input 
-                type="text" 
-                placeholder="Matière (Maths, Langues, etc.)" 
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-              />
-              <button type="submit" className="btn-search">Trouver un tuteur</button>
-            </form>
-            <div className="trust-badges">
-              <div className="badge"><BiTimeFive /> 15 min par session</div>
-              <div className="badge"><FaUsers /> +3000 experts</div>
-              <div className="badge"><FaStar /> 4.9/5 satisfaction</div>
-            </div>
+          <div className="simple-search">
+            <button 
+              onClick={() => navigate('/find-tutor')} 
+              className="btn-find-tutor"
+            >
+              Trouver un tuteur
+            </button>
+          </div>
+          <div className="trust-badges">
+            <div className="badge"><BiTimeFive /> 15 min par session</div>
+            <div className="badge"><FaUsers /> +3000 experts</div>
+            <div className="badge"><FaStar /> 4.9/5 satisfaction</div>
           </div>
         </div>
       </section>

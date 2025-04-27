@@ -5,7 +5,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import Navbar from '../components/Navbar';
 import './RegisterMultiStep.css';
-import { FaUser, FaUpload, FaCamera, FaClock } from 'react-icons/fa';
+import { FaUser, FaUpload, FaCamera, FaClock, FaMoneyBill } from 'react-icons/fa';
 
 interface TimeSlot {
   day: string;
@@ -14,8 +14,8 @@ interface TimeSlot {
 }
 
 export default function RegisterMultiStep() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 7;
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const totalSteps = 8;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,6 +33,9 @@ export default function RegisterMultiStep() {
   const [selectedDay, setSelectedDay] = useState("lundi");
   const [startTime, setStartTime] = useState("18:00");
   const [endTime, setEndTime] = useState("20:00");
+  const [price15min, setPrice15min] = useState<number | undefined>();
+  const [price30min, setPrice30min] = useState<number | undefined>();
+  const [priceHour, setPriceHour] = useState<number | undefined>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [error, setError] = useState("");
@@ -66,6 +69,11 @@ export default function RegisterMultiStep() {
         photoURL: photoURL || null,
         bio: bio || null,
         availability: roles.includes("tutor") ? availability : [],
+        ...(roles.includes("tutor") ? {
+          price15min: price15min || null,
+          price30min: price30min || null,
+          priceHour: priceHour || null
+        } : {}),
         createdAt: new Date(),
         status: "active",
       });
@@ -124,6 +132,7 @@ export default function RegisterMultiStep() {
       }
     } else if (currentStep === 5) {
     } else if (currentStep === 6) {
+    } else if (currentStep === 7) {
       if (bio.length < 40) {
         setError("Votre bio doit contenir au moins 40 caractères");
         return;
@@ -470,7 +479,58 @@ export default function RegisterMultiStep() {
             </div>
           )}
 
-          {currentStep === 5 && (
+          {currentStep === 5 && roles.includes("tutor") && (
+            <div>
+              <h3>
+                <FaMoneyBill style={{ marginRight: '10px' }} />
+                Définissez vos tarifs
+              </h3>
+              <p>Indiquez les tarifs pour vos séances de tutorat</p>
+              
+              <div className="pricing-form">
+                <div className="form-group">
+                  <label htmlFor="price15min">Prix pour 15 minutes (€)</label>
+                  <input
+                    id="price15min"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={price15min || ''}
+                    onChange={(e) => setPrice15min(e.target.value ? parseFloat(e.target.value) : undefined)}
+                    className="price-input"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="price30min">Prix pour 30 minutes (€)</label>
+                  <input
+                    id="price30min"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={price30min || ''}
+                    onChange={(e) => setPrice30min(e.target.value ? parseFloat(e.target.value) : undefined)}
+                    className="price-input"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="priceHour">Prix pour 1 heure (€)</label>
+                  <input
+                    id="priceHour"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={priceHour || ''}
+                    onChange={(e) => setPriceHour(e.target.value ? parseFloat(e.target.value) : undefined)}
+                    className="price-input"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 6 && (
             <div>
               <h3>Ajoutez une photo de profil</h3>
               <p>Cela aidera les autres utilisateurs à vous reconnaître</p>
@@ -508,7 +568,7 @@ export default function RegisterMultiStep() {
             </div>
           )}
 
-          {currentStep === 6 && (
+          {currentStep === 7 && (
             <div>
               <h3>Présentez-vous</h3>
               <p>Partagez quelques informations sur vous (minimum 40 caractères)</p>
@@ -533,8 +593,8 @@ export default function RegisterMultiStep() {
             </div>
           )}
 
-          {currentStep === 7 && (
-            <div>
+          {currentStep === 8 && (
+            <div className="final-step">
               <h3>Récapitulatif</h3>
               <div className="profile-summary">
                 {previewImage && (
@@ -591,6 +651,29 @@ export default function RegisterMultiStep() {
                     ) : (
                       <p>Aucune disponibilité définie</p>
                     )}
+                  </div>
+                  
+                  <div className="summary-item">
+                    <strong>Tarifs :</strong>
+                    <div className="pricing-summary">
+                      {price15min ? (
+                        <div className="price-item">15 minutes : {price15min}€</div>
+                      ) : (
+                        <div className="price-item">15 minutes : Non défini</div>
+                      )}
+                      
+                      {price30min ? (
+                        <div className="price-item">30 minutes : {price30min}€</div>
+                      ) : (
+                        <div className="price-item">30 minutes : Non défini</div>
+                      )}
+                      
+                      {priceHour ? (
+                        <div className="price-item">1 heure : {priceHour}€</div>
+                      ) : (
+                        <div className="price-item">1 heure : Non défini</div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
