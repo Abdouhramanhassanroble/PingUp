@@ -127,7 +127,7 @@ PingUp/
 
 ## 👥 Contributeurs
 
-- Ahmed Hassan Roble - Développeur principal & Designer UI/UX
+- Abdouhraman Hassan Roble - Développeur principal & Designer UI/UX
 
 ## 🤝 Contribuer
 
