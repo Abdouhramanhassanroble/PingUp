@@ -23,10 +23,14 @@ jobs:
             npm install
   
       - name: build the project
-        run: npm run build
+        run: |
+            cd pingup-react
+            npm run build
       
       - name: Install Netlify CLI
-        run: npm install -g netlify-cli
+        run: |
+            cd pingup-react
+            npm install -g netlify-cli
 
       - name: Deploy to Netlify
         env:
