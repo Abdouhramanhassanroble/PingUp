@@ -39,7 +39,7 @@ export default function FindTutor() {
   const [allTutors, setAllTutors] = useState<Tutor[]>([]);
   const [filteredTutors, setFilteredTutors] = useState<Tutor[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+
   
   // États pour les filtres de disponibilité
   const [filterByAvailability, setFilterByAvailability] = useState(true);

@@ -3,8 +3,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, getDoc, collection, addDoc, updateDoc, arrayUnion, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faCalendarCheck, faClockRotateLeft,
+import {  faClockRotateLeft,
   faCircleCheck, faUser, faCalendarAlt, faClock
 } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '../components/Navbar';
@@ -460,8 +459,6 @@ const BookSession: React.FC = () => {
     }
   };
   
-  // Calculate minimum date (today)
-  const minDate = new Date().toISOString().split('T')[0];
   
   // Format date for display
   const formatDisplayDate = (dateString: string) => {
@@ -820,6 +817,8 @@ const BookSession: React.FC = () => {
               <p>Votre session avec {tutor?.displayName} a été planifiée.</p>
               <div className="confirmation-summary">
                 <div className="confirmation-item">
+                <strong>ID de réservatio :</strong>
+                  <p>{bookingId}</p>
                   <FontAwesomeIcon icon={faUser} />
                   <div>
                     <strong>Tuteur</strong>
