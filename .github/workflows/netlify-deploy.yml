@@ -19,7 +19,7 @@ jobs:
       
       - name: Install dependencies
         run: cd pingup-react
-             npm install
+        run: npm install
 
       
       - name: build the project
