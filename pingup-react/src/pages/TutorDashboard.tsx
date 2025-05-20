@@ -187,8 +187,7 @@ const TutorDashboard = () => {
 
   // Calculer les statistiques
   const totalSessions = bookings.length;
-  const upcomingSessions = bookings.filter(b => !isSessionPast(b.date, b.time) && b.status === 'confirmed').length;
-  const pastSessions = bookings.filter(b => isSessionPast(b.date, b.time)).length;
+  const upcomingSessions = bookings.filter(b => !isSessionPast(b.date, b.time) && b.status === 'confirmed').length
   const pendingSessions = bookings.filter(b => b.status === 'pending').length;
   const totalRevenue = bookings
     .filter(b => b.status === 'confirmed')
