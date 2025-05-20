@@ -12,7 +12,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : [
       'http://localhost:3000',
       'http://localhost:5173',
-      'https://pingup.vercel.app'
+      'https://pingup.vercel.app',
+      'https://pingup-app.netlify.app'
     ];
 
 console.log('CORS allowed origins:', allowedOrigins);
