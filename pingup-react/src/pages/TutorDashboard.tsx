@@ -11,6 +11,7 @@ import {
   faGraduationCap, faClockFour
 } from '@fortawesome/free-solid-svg-icons';
 import './TutorDashboard.css';
+import { sendBookingConfirmationEmail, sendBookingRejectionEmail } from '../services/emailService';
 
 interface Booking {
   id: string;
@@ -39,6 +40,9 @@ const TutorDashboard = () => {
   const [error, setError] = useState('');
   const [, setProfileData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState('');
 
   // Vérifier l'authentification et les rôles
   useEffect(() => {
@@ -150,7 +154,17 @@ const TutorDashboard = () => {
   // Mise à jour du statut d'une réservation
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
+      // Récupérer les données de la réservation
       const bookingRef = doc(db, 'bookings', bookingId);
+      const bookingDoc = await getDoc(bookingRef);
+      
+      if (!bookingDoc.exists()) {
+        throw new Error("La réservation n'existe pas");
+      }
+      
+      const bookingData = bookingDoc.data();
+      
+      // Mettre à jour le statut
       await updateDoc(bookingRef, {
         status: newStatus
       });
@@ -161,6 +175,69 @@ const TutorDashboard = () => {
           ? { ...booking, status: newStatus } 
           : booking
       ));
+      
+      // Si le statut est "confirmed", envoyer un email de confirmation
+      if (newStatus === 'confirmed') {
+        try {
+          await sendBookingConfirmationEmail({
+            tutorName: bookingData.tutorName,
+            tutorEmail: bookingData.tutorEmail || '',
+            studentName: bookingData.studentName,
+            studentEmail: bookingData.studentEmail || '',
+            subject: bookingData.subject,
+            date: new Date(bookingData.date).toLocaleDateString('fr-FR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            time: bookingData.time,
+            endTime: bookingData.endTime || '',
+            duration: bookingData.duration === '15min' ? '15 minutes' : 
+                     bookingData.duration === '30min' ? '30 minutes' : '1 heure',
+            price: bookingData.price,
+            notes: bookingData.notes
+          });
+          console.log('Email de confirmation envoyé avec succès');
+        } catch (emailError) {
+          console.error('Erreur lors de l\'envoi de l\'email de confirmation:', emailError);
+          // On continue même en cas d'échec d'envoi d'email
+        }
+      }
+      
+      // Si le statut est "rejected", envoyer un email de refus
+      if (newStatus === 'rejected') {
+        try {
+          await sendBookingRejectionEmail({
+            tutorName: bookingData.tutorName,
+            tutorEmail: bookingData.tutorEmail || '',
+            studentName: bookingData.studentName,
+            studentEmail: bookingData.studentEmail || '',
+            subject: bookingData.subject,
+            date: new Date(bookingData.date).toLocaleDateString('fr-FR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            time: bookingData.time,
+            endTime: bookingData.endTime || '',
+            duration: bookingData.duration === '15min' ? '15 minutes' : 
+                     bookingData.duration === '30min' ? '30 minutes' : '1 heure',
+            price: bookingData.price,
+            notes: bookingData.notes,
+            rejectionReason: rejectionReason
+          });
+          console.log('Email de refus envoyé avec succès');
+          
+          // Réinitialiser le champ de raison de refus
+          setRejectionReason('');
+          setShowRejectionModal(false);
+        } catch (emailError) {
+          console.error('Erreur lors de l\'envoi de l\'email de refus:', emailError);
+          // On continue même en cas d'échec d'envoi d'email
+        }
+      }
     } catch (err) {
       console.error('Erreur lors de la mise à jour du statut:', err);
       setError('Impossible de mettre à jour le statut. Veuillez réessayer.');
@@ -192,6 +269,19 @@ const TutorDashboard = () => {
   const totalRevenue = bookings
     .filter(b => b.status === 'confirmed')
     .reduce((total, booking) => total + booking.price, 0);
+
+  // Afficher la modal de refus
+  const handleRejectClick = (bookingId: string) => {
+    setSelectedBookingId(bookingId);
+    setShowRejectionModal(true);
+  };
+  
+  // Confirmer le refus avec la raison
+  const confirmRejection = () => {
+    if (selectedBookingId) {
+      updateBookingStatus(selectedBookingId, 'rejected');
+    }
+  };
 
   if (loading) {
     return (
@@ -397,7 +487,7 @@ const TutorDashboard = () => {
                             </button>
                             <button 
                               className="btn-reject"
-                              onClick={() => updateBookingStatus(booking.id, 'rejected')}
+                              onClick={() => handleRejectClick(booking.id)}
                             >
                               <FontAwesomeIcon icon={faTimes} /> Refuser
                             </button>
@@ -420,6 +510,36 @@ const TutorDashboard = () => {
             )}
           </div>
         </div>
+        
+        {/* Modal de refus */}
+        {showRejectionModal && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h3>Refuser la réservation</h3>
+              <p>Veuillez indiquer la raison du refus (optionnel) :</p>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Ex: Indisponible à cette date, problème de planning, etc."
+                rows={4}
+              />
+              <div className="modal-actions">
+                <button 
+                  className="btn-secondary"
+                  onClick={() => setShowRejectionModal(false)}
+                >
+                  Annuler
+                </button>
+                <button 
+                  className="btn-reject"
+                  onClick={confirmRejection}
+                >
+                  Confirmer le refus
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

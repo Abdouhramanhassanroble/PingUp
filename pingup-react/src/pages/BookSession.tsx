@@ -441,7 +441,7 @@ const BookSession: React.FC = () => {
         endTime: selectedTimeSlot?.endTime,
         price,
         notes,
-        status: 'confirmed', // Auto-confirm since there's no payment
+        status: 'pending', // Statut "en attente" par défaut
         createdAt: serverTimestamp()
       };
       
@@ -458,30 +458,7 @@ const BookSession: React.FC = () => {
         bookings: arrayUnion(bookingRef.id)
       }).catch(err => console.log('Note: could not update student bookings array', err));
       
-      // Envoyer l'email de confirmation à l'étudiant et au tuteur
-      try {
-        await sendBookingConfirmationEmail({
-          tutorName: booking.tutorName,
-          tutorEmail: booking.tutorEmail || '',
-          studentName: booking.studentName,
-          studentEmail: booking.studentEmail || '',
-          subject: booking.subject,
-          date: new Date(booking.date).toLocaleDateString('fr-FR', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          }),
-          time: booking.time,
-          endTime: booking.endTime || '',
-          duration: booking.duration === '15min' ? '15 minutes' : booking.duration === '30min' ? '30 minutes' : '1 heure',
-          price: booking.price
-        });
-        console.log('Email de confirmation envoyé avec succès');
-      } catch (emailError) {
-        console.error('Erreur lors de l\'envoi de l\'email de confirmation:', emailError);
-        // On continue même en cas d'échec d'envoi d'email
-      }
+      // Nous ne envoyons plus l'email ici - il sera envoyé quand le tuteur acceptera la réservation
       
       // Ajouter l'événement au calendrier Google via Zapier
       try {
@@ -890,11 +867,12 @@ const BookSession: React.FC = () => {
               <div className="success-icon">
                 <FontAwesomeIcon icon={faCircleCheck} />
               </div>
-              <h3>Réservation confirmée !</h3>
-              <p>Votre session avec {tutor?.displayName} a été planifiée.</p>
+              <h3>Réservation en attente de confirmation</h3>
+              <p>Votre demande de session avec {tutor?.displayName} a été enregistrée avec succès.</p>
+              <p className="pending-info">Le tuteur doit maintenant confirmer cette réservation. Vous recevrez un email dès que votre session sera confirmée.</p>
               <div className="confirmation-summary">
                 <div className="confirmation-item">
-                <strong>ID de réservatio :</strong>
+                <strong>ID de réservation :</strong>
                   <p>{bookingId}</p>
                   <FontAwesomeIcon icon={faUser} />
                   <div>

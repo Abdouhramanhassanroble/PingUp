@@ -108,7 +108,7 @@ app.post('/api/send-confirmation-email', async (req, res) => {
         <div style="background-color: #f9f9f9; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
           <h2 style="color: #2c8f83; margin-top: 0; font-weight: 600;">Confirmation de Réservation</h2>
           <p style="color: #333; font-size: 16px; line-height: 1.5;">Bonjour ${studentName} et ${tutorName},</p>
-          <p style="color: #333; font-size: 16px; line-height: 1.5;">Nous vous confirmons que votre session de tutorat a été réservée avec succès.</p>
+          <p style="color: #333; font-size: 16px; line-height: 1.5;">Nous vous confirmons que votre session de tutorat a été confirmée et planifiée. La réservation a été acceptée par le tuteur.</p>
         </div>
         
         <div style="background-color: #fff; border-left: 4px solid #3fb8a9; padding: 15px; margin-bottom: 20px;">
@@ -138,6 +138,7 @@ app.post('/api/send-confirmation-email', async (req, res) => {
         </div>
         
         <div style="background-color: #f0f9f7; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
+          <p style="color: #333; margin-top: 0; font-size: 15px;">✓ Cette session a été vérifiée et confirmée par le tuteur.</p>
           <p style="color: #333; margin-top: 0; font-size: 15px;">✓ Un événement a été ajouté à votre calendrier Google.</p>
           <p style="color: #333; margin-bottom: 0; font-size: 15px;">✓ Vous recevrez un rappel automatique 24 heures avant la session.</p>
         </div>
@@ -159,7 +160,7 @@ app.post('/api/send-confirmation-email', async (req, res) => {
 
       Bonjour ${studentName} et ${tutorName},
 
-      Nous vous confirmons que votre session de tutorat a été réservée avec succès.
+      Nous vous confirmons que votre session de tutorat a été confirmée et planifiée. La réservation a été acceptée par le tuteur.
 
       Détails de la session :
       - Matière : ${subject}
@@ -200,6 +201,144 @@ app.post('/api/send-confirmation-email', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Erreur lors de l\'envoi de l\'email',
+      error: error.message
+    });
+  }
+});
+
+// Route pour envoyer un email de refus de réservation
+app.post('/api/send-rejection-email', async (req, res) => {
+  try {
+    const { 
+      tutorName, 
+      tutorEmail, 
+      studentName, 
+      studentEmail, 
+      subject, 
+      date, 
+      time, 
+      endTime,
+      duration,
+      price,
+      rejectionReason
+    } = req.body;
+
+    // Validation des données requises
+    if (!tutorEmail || !studentEmail || !subject || !date || !time) {
+      return res.status(400).json({ success: false, message: 'Données manquantes pour l\'envoi de l\'email' });
+    }
+
+    // Préparation du contenu de l'email
+    const htmlContent = `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="https://i.imgur.com/4SfjWEc.png" alt="PingUp" style="max-width: 150px; height: auto;" />
+        </div>
+        
+        <div style="background-color: #f9f9f9; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
+          <h2 style="color: #e74c3c; margin-top: 0; font-weight: 600;">Réservation non disponible</h2>
+          <p style="color: #333; font-size: 16px; line-height: 1.5;">Bonjour ${studentName} et ${tutorName},</p>
+          <p style="color: #333; font-size: 16px; line-height: 1.5;">Nous sommes désolés de vous informer que la demande de session de tutorat n'a pas pu être confirmée.</p>
+        </div>
+        
+        <div style="background-color: #fff; border-left: 4px solid #e74c3c; padding: 15px; margin-bottom: 20px;">
+          <h3 style="color: #333; margin-top: 0; font-size: 18px;">Détails de la session demandée</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666; width: 40%;"><strong>Matière</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${subject}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Date</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${date}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Horaire</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${time} - ${endTime || ''}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Durée</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #333;">${duration}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;"><strong>Tarif</strong></td>
+              <td style="padding: 8px 0; color: #333;"><span style="font-weight: 600;">${price}€</span></td>
+            </tr>
+          </table>
+        </div>
+        
+        ${rejectionReason ? `
+        <div style="background-color: #fff7f7; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
+          <h3 style="color: #e74c3c; margin-top: 0; font-size: 16px;">Motif du refus :</h3>
+          <p style="color: #333; margin-top: 5px; font-size: 15px;">${rejectionReason}</p>
+        </div>
+        ` : ''}
+        
+        <div style="background-color: #f0f9f7; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
+          <p style="color: #333; margin-top: 0; font-size: 15px;">✓ Nous vous invitons à explorer d'autres créneaux ou tuteurs disponibles.</p>
+          <p style="color: #333; margin-bottom: 0; font-size: 15px;">✓ L'équipe PingUp reste à votre disposition pour vous aider à trouver une solution alternative.</p>
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
+          <p>Si vous avez des questions, n'hésitez pas à contacter notre équipe de support.</p>
+          <p style="margin-bottom: 5px;">Cordialement,</p>
+          <p style="font-weight: 600; color: #2c8f83; margin-top: 0;">L'équipe PingUp</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #999;">
+          <p>© 2024 PingUp. Tous droits réservés.</p>
+        </div>
+      </div>
+    `;
+
+    const textContent = `
+      Réservation Non Disponible - PingUp
+
+      Bonjour ${studentName} et ${tutorName},
+
+      Nous sommes désolés de vous informer que la demande de session de tutorat n'a pas pu être confirmée.
+
+      Détails de la session demandée :
+      - Matière : ${subject}
+      - Date : ${date}
+      - Horaire : ${time} - ${endTime || ''}
+      - Durée : ${duration}
+      - Tarif : ${price}€
+
+      ${rejectionReason ? `Motif du refus : ${rejectionReason}` : ''}
+
+      Nous vous invitons à explorer d'autres créneaux ou tuteurs disponibles.
+      L'équipe PingUp reste à votre disposition pour vous aider à trouver une solution alternative.
+
+      Si vous avez des questions, n'hésitez pas à contacter notre équipe de support.
+
+      Cordialement,
+      L'équipe PingUp
+    `;
+
+    // Options d'email
+    const mailOptions = {
+      from: `"PingUp" <${process.env.EMAIL_USER}>`,
+      to: [studentEmail, tutorEmail].join(','),
+      subject: `Réservation non disponible - ${subject}`,
+      text: textContent,
+      html: htmlContent
+    };
+
+    // Envoi de l'email
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email de refus envoyé:', info.messageId);
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Email de refus envoyé avec succès',
+      messageId: info.messageId
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de l\'email de refus:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur lors de l\'envoi de l\'email de refus',
       error: error.message
     });
   }
