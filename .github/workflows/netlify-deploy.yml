@@ -18,7 +18,9 @@ jobs:
           node-version: '18'
       
       - name: Install dependencies
-        run: npm install
+        run: cd pingup-react
+             npm install
+
       
       - name: build the project
         run: npm run build
