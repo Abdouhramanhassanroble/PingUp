@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { doc, getDoc, collection, addDoc, updateDoc, arrayUnion, Timestamp, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, updateDoc, arrayUnion, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {  faClockRotateLeft,
   faCircleCheck, faUser, faCalendarAlt, faClock
