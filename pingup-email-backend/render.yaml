@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: pingup-email-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: EMAIL_SERVICE
+        value: gmail
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: PORT
+        value: 10000
+    autoDeploy: true 

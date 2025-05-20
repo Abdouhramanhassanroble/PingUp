@@ -7,7 +7,8 @@ import Navbar from '../components/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faCalendarCheck, faClockRotateLeft, faChalkboardTeacher,
-  faUser, faCalendarAlt, faClock, faMoneyBill, faStar, faCheck, faTimes
+  faUser, faCalendarAlt, faClock, faMoneyBillWave, faStar, faCheck, faTimes,
+  faGraduationCap, faClockFour
 } from '@fortawesome/free-solid-svg-icons';
 import './TutorDashboard.css';
 
@@ -30,22 +31,14 @@ interface Booking {
   createdAt: any;
 }
 
-interface Statistic {
-  label: string;
-  value: string | number;
-  icon: any;
-  color: string;
-}
-
 const TutorDashboard = () => {
   const navigate = useNavigate();
-  const [, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [statistics, setStatistics] = useState<Statistic[]>([]);
   const [error, setError] = useState('');
-  const [, setProfileData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('upcoming');
+  const [profileData, setProfileData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('all');
 
   // Vérifier l'authentification et les rôles
   useEffect(() => {
@@ -108,72 +101,12 @@ const TutorDashboard = () => {
       });
 
       setBookings(bookingsData);
-      calculateStatistics(bookingsData);
     } catch (err) {
       console.error('Erreur lors du chargement des réservations:', err);
       setError('Impossible de charger vos réservations. Veuillez réessayer plus tard.');
     } finally {
       setLoading(false);
     }
-  };
-
-  // Calculer les statistiques pour le tableau de bord
-  const calculateStatistics = (bookings: Booking[]) => {
-    const now = new Date();
-    
-    const totalBookings = bookings.length;
-    
-    const confirmedBookings = bookings.filter(booking => 
-      booking.status === 'confirmed'
-    ).length;
-    
-    const upcomingBookings = bookings.filter(booking => {
-      const [year, month, day] = booking.date.split('-').map(Number);
-      const [hours, minutes] = booking.time.split(':').map(Number);
-      const bookingDate = new Date(year, month - 1, day, hours, minutes);
-      return bookingDate > now && booking.status === 'confirmed';
-    }).length;
-    
-    const completedBookings = bookings.filter(booking => {
-      const [year, month, day] = booking.date.split('-').map(Number);
-      const [hours, minutes] = booking.time.split(':').map(Number);
-      const bookingDate = new Date(year, month - 1, day, hours, minutes);
-      return bookingDate < now && booking.status === 'confirmed';
-    }).length;
-
-    // Calculer le revenu total (uniquement des sessions confirmées)
-    const totalRevenue = bookings
-      .filter(booking => booking.status === 'confirmed')
-      .reduce((sum, booking) => sum + booking.price, 0);
-
-    const stats: Statistic[] = [
-      {
-        label: 'Sessions à venir',
-        value: upcomingBookings,
-        icon: faCalendarCheck,
-        color: 'var(--primary)'
-      },
-      {
-        label: 'Sessions complétées',
-        value: completedBookings,
-        icon: faCheck,
-        color: 'var(--success)'
-      },
-      {
-        label: 'Taux de confirmation',
-        value: totalBookings ? `${Math.round((confirmedBookings / totalBookings) * 100)}%` : '0%',
-        icon: faStar,
-        color: 'var(--warning)'
-      },
-      {
-        label: 'Revenus totaux',
-        value: `${totalRevenue}€`,
-        icon: faMoneyBill,
-        color: 'var(--info)'
-      }
-    ];
-
-    setStatistics(stats);
   };
 
   // Formater la date pour l'affichage
@@ -228,32 +161,38 @@ const TutorDashboard = () => {
           ? { ...booking, status: newStatus } 
           : booking
       ));
-      
-      // Recalculer les statistiques
-      calculateStatistics(bookings.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: newStatus } 
-          : booking
-      ));
     } catch (err) {
       console.error('Erreur lors de la mise à jour du statut:', err);
       setError('Impossible de mettre à jour le statut. Veuillez réessayer.');
     }
   };
 
-  // Filtrer les réservations selon l'onglet actif
+  // Filtrer les réservations en fonction de l'onglet actif
   const filteredBookings = bookings.filter(booking => {
     const isPast = isSessionPast(booking.date, booking.time);
     
-    if (activeTab === 'upcoming') {
-      return !isPast && booking.status === 'confirmed';
-    } else if (activeTab === 'past') {
-      return isPast && booking.status === 'confirmed';
-    } else if (activeTab === 'all') {
-      return true;
+    switch(activeTab) {
+      case 'upcoming':
+        return !isPast && booking.status === 'confirmed';
+      case 'past':
+        return isPast;
+      case 'confirmed':
+        return booking.status === 'confirmed' && !isPast;
+      case 'pending':
+        return booking.status === 'pending';
+      default:
+        return true;
     }
-    return false;
   });
+
+  // Calculer les statistiques
+  const totalSessions = bookings.length;
+  const upcomingSessions = bookings.filter(b => !isSessionPast(b.date, b.time) && b.status === 'confirmed').length;
+  const pastSessions = bookings.filter(b => isSessionPast(b.date, b.time)).length;
+  const pendingSessions = bookings.filter(b => b.status === 'pending').length;
+  const totalRevenue = bookings
+    .filter(b => b.status === 'confirmed')
+    .reduce((total, booking) => total + booking.price, 0);
 
   if (loading) {
     return (
@@ -276,22 +215,57 @@ const TutorDashboard = () => {
         </div>
 
         <div className="tutor-dashboard-content">
-          {/* Section statistiques */}
-          <div className="stats-grid">
-            {statistics.map((stat, index) => (
-              <div key={index} className="stat-card">
-                <div className="stat-icon" style={{ backgroundColor: stat.color }}>
-                  <FontAwesomeIcon icon={stat.icon} />
+          {/* Section des statistiques */}
+          <div className="tutor-dashboard-section">
+            <h2>
+              <FontAwesomeIcon icon={faGraduationCap} />
+              Mes statistiques
+            </h2>
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: '#3b82f6' }}>
+                  <FontAwesomeIcon icon={faCalendarCheck} />
                 </div>
                 <div className="stat-details">
-                  <h3>{stat.label}</h3>
-                  <p className="stat-value">{stat.value}</p>
+                  <h3>Sessions totales</h3>
+                  <div className="stat-value">{totalSessions}</div>
                 </div>
               </div>
-            ))}
+
+              <div className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: '#22c55e' }}>
+                  <FontAwesomeIcon icon={faClockFour} />
+                </div>
+                <div className="stat-details">
+                  <h3>Sessions à venir</h3>
+                  <div className="stat-value">{upcomingSessions}</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: '#f59e0b' }}>
+                  <FontAwesomeIcon icon={faStar} />
+                </div>
+                <div className="stat-details">
+                  <h3>Sessions en attente</h3>
+                  <div className="stat-value">{pendingSessions}</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: '#6b7280' }}>
+                  <FontAwesomeIcon icon={faMoneyBillWave} />
+                </div>
+                <div className="stat-details">
+                  <h3>Revenus totaux</h3>
+                  <div className="stat-value">{totalRevenue}€</div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Section réservations */}
+          {/* Section des réservations */}
           <div className="tutor-dashboard-section">
             <h2>
               <FontAwesomeIcon icon={faCalendarCheck} />
@@ -300,8 +274,13 @@ const TutorDashboard = () => {
 
             {error && <div className="error-alert">{error}</div>}
 
-            {/* Onglets de filtrage */}
             <div className="booking-tabs">
+              <button 
+                className={`tab-button ${activeTab === 'all' ? 'active' : ''}`}
+                onClick={() => setActiveTab('all')}
+              >
+                Toutes les sessions
+              </button>
               <button 
                 className={`tab-button ${activeTab === 'upcoming' ? 'active' : ''}`}
                 onClick={() => setActiveTab('upcoming')}
@@ -312,19 +291,19 @@ const TutorDashboard = () => {
                 className={`tab-button ${activeTab === 'past' ? 'active' : ''}`}
                 onClick={() => setActiveTab('past')}
               >
-                Passées
+                Terminées
               </button>
               <button 
-                className={`tab-button ${activeTab === 'all' ? 'active' : ''}`}
-                onClick={() => setActiveTab('all')}
+                className={`tab-button ${activeTab === 'pending' ? 'active' : ''}`}
+                onClick={() => setActiveTab('pending')}
               >
-                Toutes
+                En attente
               </button>
             </div>
 
             {filteredBookings.length === 0 ? (
               <div className="no-bookings">
-                <p>Vous n'avez pas de sessions {activeTab === 'upcoming' ? 'à venir' : activeTab === 'past' ? 'passées' : ''} pour le moment.</p>
+                <p>Aucune session trouvée dans cette catégorie.</p>
               </div>
             ) : (
               <div className="bookings-grid">
@@ -339,7 +318,9 @@ const TutorDashboard = () => {
                       <div className="booking-header">
                         <div className="booking-status">
                           <span className={`status-badge ${booking.status}`}>
-                            {booking.status === 'confirmed' ? 'Confirmé' : booking.status}
+                            {booking.status === 'confirmed' ? 'Confirmé' : 
+                             booking.status === 'pending' ? 'En attente' : 
+                             booking.status === 'cancelled' ? 'Annulé' : booking.status}
                           </span>
                           {isPast && (
                             <span className="status-badge past">Passé</span>

@@ -7,7 +7,8 @@ import Navbar from '../components/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faCalendarCheck, faClockRotateLeft, faChalkboardTeacher,
-  faUser, faCalendarAlt, faClock
+  faUser, faCalendarAlt, faClock, faGraduationCap,
+  faMoneyBillWave, faClockFour, faCheck
 } from '@fortawesome/free-solid-svg-icons';
 import './Dashboard.css';
 
@@ -32,17 +33,17 @@ interface Booking {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
 
   // Vérifier l'authentification et charger les réservations
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
-        
         loadBookings(user.uid);
       } else {
         navigate('/login', { state: { returnUrl: '/dashboard' } });
@@ -129,6 +130,30 @@ const Dashboard = () => {
     return sessionDate < now;
   };
 
+  // Filtrer les réservations en fonction de l'onglet actif
+  const filteredBookings = bookings.filter(booking => {
+    const isPast = isSessionPast(booking.date, booking.time);
+    
+    switch(activeTab) {
+      case 'upcoming':
+        return !isPast && booking.status === 'confirmed';
+      case 'past':
+        return isPast;
+      case 'confirmed':
+        return booking.status === 'confirmed' && !isPast;
+      case 'cancelled':
+        return booking.status === 'cancelled';
+      default:
+        return true;
+    }
+  });
+
+  // Calculer les statistiques
+  const totalSessions = bookings.length;
+  const upcomingSessions = bookings.filter(b => !isSessionPast(b.date, b.time) && b.status === 'confirmed').length;
+  const pastSessions = bookings.filter(b => isSessionPast(b.date, b.time)).length;
+  const totalSpent = bookings.reduce((total, booking) => total + booking.price, 0);
+
   if (loading) {
     return (
       <>
@@ -150,6 +175,57 @@ const Dashboard = () => {
         </div>
 
         <div className="dashboard-content">
+          {/* Section des statistiques */}
+          <div className="dashboard-section">
+            <h2>
+              <FontAwesomeIcon icon={faGraduationCap} />
+              Mes statistiques
+            </h2>
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: '#3b82f6' }}>
+                  <FontAwesomeIcon icon={faCalendarCheck} />
+                </div>
+                <div className="stat-details">
+                  <h3>Sessions totales</h3>
+                  <div className="stat-value">{totalSessions}</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: '#22c55e' }}>
+                  <FontAwesomeIcon icon={faClockFour} />
+                </div>
+                <div className="stat-details">
+                  <h3>Sessions à venir</h3>
+                  <div className="stat-value">{upcomingSessions}</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: '#6b7280' }}>
+                  <FontAwesomeIcon icon={faCheck} />
+                </div>
+                <div className="stat-details">
+                  <h3>Sessions terminées</h3>
+                  <div className="stat-value">{pastSessions}</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: '#f59e0b' }}>
+                  <FontAwesomeIcon icon={faMoneyBillWave} />
+                </div>
+                <div className="stat-details">
+                  <h3>Total dépensé</h3>
+                  <div className="stat-value">{totalSpent}€</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section des réservations */}
           <div className="dashboard-section">
             <h2>
               <FontAwesomeIcon icon={faCalendarCheck} />
@@ -158,9 +234,36 @@ const Dashboard = () => {
 
             {error && <div className="error-alert">{error}</div>}
 
-            {bookings.length === 0 ? (
+            <div className="booking-tabs">
+              <button 
+                className={`tab-button ${activeTab === 'all' ? 'active' : ''}`}
+                onClick={() => setActiveTab('all')}
+              >
+                Toutes les sessions
+              </button>
+              <button 
+                className={`tab-button ${activeTab === 'upcoming' ? 'active' : ''}`}
+                onClick={() => setActiveTab('upcoming')}
+              >
+                À venir
+              </button>
+              <button 
+                className={`tab-button ${activeTab === 'past' ? 'active' : ''}`}
+                onClick={() => setActiveTab('past')}
+              >
+                Terminées
+              </button>
+              <button 
+                className={`tab-button ${activeTab === 'cancelled' ? 'active' : ''}`}
+                onClick={() => setActiveTab('cancelled')}
+              >
+                Annulées
+              </button>
+            </div>
+
+            {filteredBookings.length === 0 ? (
               <div className="no-bookings">
-                <p>Vous n'avez pas encore de réservations.</p>
+                <p>Aucune réservation trouvée dans cette catégorie.</p>
                 <button 
                   className="btn-primary"
                   onClick={() => navigate('/find-tutor')}
@@ -170,7 +273,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="bookings-grid">
-                {bookings.map((booking) => {
+                {filteredBookings.map((booking) => {
                   const isPast = isSessionPast(booking.date, booking.time);
                   
                   return (
@@ -241,7 +344,7 @@ const Dashboard = () => {
                       )}
                       
                       <div className="booking-actions">
-                        {!isPast && (
+                        {!isPast && booking.status === 'confirmed' && (
                           <button 
                             className="btn-cancel"
                             onClick={() => {

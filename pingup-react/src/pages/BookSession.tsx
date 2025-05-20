@@ -8,6 +8,9 @@ import {  faClockRotateLeft,
 } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '../components/Navbar';
 import './BookSession.css';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { sendBookingConfirmationEmail } from '../services/emailService';
+import { sendCalendarEventToZapier, CalendarEventData, formatCalendarDateTime } from '../services/zapierService';
 
 type Tutor = {
   id: string;
@@ -440,6 +443,63 @@ const BookSession: React.FC = () => {
       await updateDoc(doc(db, 'users', currentUser.uid), {
         bookings: arrayUnion(bookingRef.id)
       }).catch(err => console.log('Note: could not update student bookings array', err));
+      
+      // Envoyer l'email de confirmation à l'étudiant et au tuteur
+      try {
+        await sendBookingConfirmationEmail({
+          tutorName: booking.tutorName,
+          tutorEmail: booking.tutorEmail || '',
+          studentName: booking.studentName,
+          studentEmail: booking.studentEmail || '',
+          subject: booking.subject,
+          date: new Date(booking.date).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          time: booking.time,
+          endTime: booking.endTime || '',
+          duration: booking.duration === '15min' ? '15 minutes' : booking.duration === '30min' ? '30 minutes' : '1 heure',
+          price: booking.price
+        });
+        console.log('Email de confirmation envoyé avec succès');
+      } catch (emailError) {
+        console.error('Erreur lors de l\'envoi de l\'email de confirmation:', emailError);
+        // On continue même en cas d'échec d'envoi d'email
+      }
+      
+      // Ajouter l'événement au calendrier Google via Zapier
+      try {
+        // Préparer les dates pour l'événement Google Calendar
+        const bookingDate = new Date(booking.date);
+        const startDateTime = formatCalendarDateTime(bookingDate, booking.time);
+        const endDateTime = formatCalendarDateTime(bookingDate, booking.endTime || '');
+        
+        const calendarEvent: CalendarEventData = {
+          title: `Session de tutorat - ${booking.subject}`,
+          description: `Session avec ${booking.tutorName} et ${booking.studentName}.\n\nNotes: ${booking.notes || 'Aucune'}`,
+          location: 'En ligne via PingUp',
+          start_time: startDateTime,
+          end_time: endDateTime,
+          email: booking.tutorEmail // L'email du tuteur pour son calendrier
+        };
+        
+        await sendCalendarEventToZapier(calendarEvent);
+        console.log('Événement ajouté au calendrier Google avec succès');
+        
+        // Ajouter également au calendrier de l'étudiant si nous avons son email
+        if (booking.studentEmail) {
+          const studentCalendarEvent = {
+            ...calendarEvent,
+            email: booking.studentEmail
+          };
+          await sendCalendarEventToZapier(studentCalendarEvent);
+        }
+      } catch (calendarError) {
+        console.error('Erreur lors de l\'ajout au calendrier:', calendarError);
+        // On continue même en cas d'échec d'ajout au calendrier
+      }
       
       // Rafraîchir les créneaux disponibles après réservation réussie
       if (tutor?.availability) {
