@@ -33,7 +33,7 @@ interface Booking {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState('');

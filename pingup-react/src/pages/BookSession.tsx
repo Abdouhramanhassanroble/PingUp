@@ -8,7 +8,6 @@ import {  faClockRotateLeft,
 } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '../components/Navbar';
 import './BookSession.css';
-import { useAuthState } from 'react-firebase-hooks/auth';
 import { sendBookingConfirmationEmail } from '../services/emailService';
 import { sendCalendarEventToZapier, CalendarEventData, formatCalendarDateTime } from '../services/zapierService';
 

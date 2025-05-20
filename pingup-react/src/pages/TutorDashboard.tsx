@@ -33,11 +33,11 @@ interface Booking {
 
 const TutorDashboard = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState('');
-  const [profileData, setProfileData] = useState<any>(null);
+  const [, setProfileData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('all');
 
   // Vérifier l'authentification et les rôles

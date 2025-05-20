@@ -62,7 +62,7 @@ export const sendBookingConfirmationEmail = async (
 };
 
 // Fonction pour envoyer un email
-const sendEmail = async (to: string, subject: string, html: string) => {
+/*const sendEmail = async (to: string, subject: string, html: string) => {
   try {
     // Ajouter l'email à la collection 'emails' dans Firestore
     await addDoc(collection(db, 'emails'), {
@@ -78,3 +78,4 @@ const sendEmail = async (to: string, subject: string, html: string) => {
     return false;
   }
 }; 
+*/ 
