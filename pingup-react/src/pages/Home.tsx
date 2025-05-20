@@ -122,7 +122,7 @@ export default function Home() {
       </section>
 
       {/* COMMENT ÇA MARCHE */}
-      <section className="how-it-works">
+      <section className="howitworks">
         <h2>Comment fonctionne PingUp ?</h2>
         <div className="steps-container">
           <div className="step">

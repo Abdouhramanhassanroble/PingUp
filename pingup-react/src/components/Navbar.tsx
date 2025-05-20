@@ -4,7 +4,7 @@ import { auth, db } from '../firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import "./Navbar.css";
-import { FaUserCircle, FaSearch, FaChalkboardTeacher, FaGraduationCap, FaBell, FaBars, FaTimes } from 'react-icons/fa';
+import { FaUserCircle, FaSearch, FaChalkboardTeacher, FaGraduationCap, FaBars, FaTimes } from 'react-icons/fa';
 
 interface UserData {
   roles?: string[];
@@ -71,12 +71,24 @@ export default function Navbar() {
   // Fonction pour le défilement doux vers les ancres (uniquement pour la page d'accueil)
   const scrollToSection = (id: string) => {
     if (isHomePage) {
-      const element = document.getElementById(id);
+      // D'abord essayer de trouver par ID
+      let element = document.getElementById(id);
+      
+      // Si pas trouvé, essayer de trouver par classe
+      if (!element) {
+        const elements = document.getElementsByClassName(id);
+        if (elements.length > 0) {
+          element = elements[0] as HTMLElement;
+        }
+      }
+      
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        console.log(`Élément "${id}" non trouvé`);
       }
     } else {
-      navigate(`/#${id}`);
+      navigate(`/?section=${id}`);
     }
     setIsDropdownOpen(false);
     setMobileMenuOpen(false);
@@ -128,16 +140,21 @@ export default function Navbar() {
                 </Link>
               </li>
             )}
-            <li>
-              <Link to="/notifications" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-                <FaBell className="nav-icon" />
-                <span className="notification-badge">2</span>
-              </Link>
-            </li>
           </ul>
         ) : (
           // Navigation pour visiteurs
           <ul className={`nav-links ${mobileMenuOpen ? 'mobile-active' : ''}`}>
+            <li>
+              <a 
+                href="#about" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  scrollToSection('about'); 
+                }}
+              >
+                Qui sommes-nous
+              </a>
+            </li>
             <li>
               <a 
                 href="#services" 
@@ -151,13 +168,35 @@ export default function Navbar() {
             </li>
             <li>
               <a 
-                href="#about" 
+                href="#" 
                 onClick={(e) => { 
                   e.preventDefault(); 
-                  scrollToSection('about'); 
+                  scrollToSection('howitworks'); 
                 }}
               >
-                Qui sommes-nous
+                Comment ça marche
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  scrollToSection('featured-tutors'); 
+                }}
+              >
+                Nos experts
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  scrollToSection('testimonials'); 
+                }}
+              >
+                Témoignages
               </a>
             </li>
           </ul>

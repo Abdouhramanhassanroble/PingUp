@@ -588,7 +588,7 @@ section h2:after {
 }
 
 /* Comment ça marche */
-.how-it-works {
+.howitworks {
   background-color: var(--white);
 }
 
@@ -629,7 +629,7 @@ section h2:after {
   color: var(--gray-600);
 }
 
-.how-it-works .btn-primary {
+.howitworks .btn-primary {
   display: block;
   margin: 0 auto;
 }
@@ -996,7 +996,7 @@ html {
 }
 
 /* Styles pour centrer les boutons */
-.how-it-works .btn-primary,
+.howitworks .btn-primary,
 .categories .btn-primary,
 .featured-tutors .btn-primary {
   display: block;

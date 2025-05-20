@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { doc, getDoc, collection, addDoc, updateDoc, arrayUnion, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, updateDoc, arrayUnion, Timestamp, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {  faClockRotateLeft,
   faCircleCheck, faUser, faCalendarAlt, faClock
@@ -166,22 +166,23 @@ const BookSession: React.FC = () => {
     setLoading(true);
 
     try {
-      // Récupérer toutes les réservations existantes pour ce tuteur
+      // Récupérer toutes les réservations existantes pour ce tuteur (confirmées ET en attente)
       const bookingsQuery = query(
         collection(db, 'bookings'),
         where('tutorId', '==', tutorId),
-        where('status', '==', 'confirmed')
+        where('status', 'in', ['confirmed', 'pending']) // Inclure les réservations confirmées ET en attente
       );
 
       const bookingsSnapshot = await getDocs(bookingsQuery);
-      const existingBookings: {date: string, time: string, endTime: string}[] = [];
+      const existingBookings: {date: string, time: string, endTime: string, status: string}[] = [];
       
       bookingsSnapshot.forEach((doc) => {
         const booking = doc.data();
         existingBookings.push({
           date: booking.date,
           time: booking.time,
-          endTime: booking.endTime || ''
+          endTime: booking.endTime || '',
+          status: booking.status
         });
       });
       
@@ -302,7 +303,21 @@ const BookSession: React.FC = () => {
                   durationMinutes: slotDuration
                 });
               } else {
-                console.log(`Créneau déjà réservé: ${dateString} ${timeString}-${endTimeString}`);
+                // Trouver la réservation qui bloque ce créneau
+                const blockingBooking = existingBookings.find(booking => {
+                  if (booking.date !== dateString) return false;
+                  
+                  const bookingStartTime = convertTimeToMinutes(booking.time);
+                  const bookingEndTime = booking.endTime ? convertTimeToMinutes(booking.endTime) : bookingStartTime + 60;
+                  
+                  return (
+                    startTime < bookingEndTime &&
+                    (startTime + slotDuration) > bookingStartTime
+                  );
+                });
+                
+                const statusLabel = blockingBooking?.status === 'pending' ? 'en attente' : 'confirmé';
+                console.log(`Créneau déjà réservé (${statusLabel}): ${dateString} ${timeString}-${endTimeString}`);
               }
               
               startTime += slotDuration;
@@ -427,7 +442,7 @@ const BookSession: React.FC = () => {
         price,
         notes,
         status: 'confirmed', // Auto-confirm since there's no payment
-        createdAt: Timestamp.now()
+        createdAt: serverTimestamp()
       };
       
       // Add booking to Firestore
@@ -502,10 +517,13 @@ const BookSession: React.FC = () => {
       
       // Rafraîchir les créneaux disponibles après réservation réussie
       if (tutor?.availability) {
-        // Pas besoin d'attendre ici car on va rediriger l'utilisateur
-        generateAllAvailableTimeSlots(tutor.availability).catch(err => 
-          console.error("Erreur lors de la mise à jour des créneaux disponibles:", err)
-        );
+        try {
+          // Forcer la mise à jour des créneaux disponibles immédiatement
+          await generateAllAvailableTimeSlots(tutor.availability);
+          console.log('Créneaux disponibles mis à jour après réservation');
+        } catch (updateError) {
+          console.error('Erreur lors de la mise à jour des créneaux disponibles:', updateError);
+        }
       }
       
       setBookingId(bookingRef.id);
