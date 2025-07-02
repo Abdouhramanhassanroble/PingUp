@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faCalendarCheck, faClockRotateLeft, faChalkboardTeacher,
   faUser, faCalendarAlt, faClock, faGraduationCap,
-  faMoneyBillWave, faClockFour, faCheck
+  faMoneyBillWave, faClockFour, faCheck, faVideo
 } from '@fortawesome/free-solid-svg-icons';
 import './Dashboard.css';
 
@@ -128,6 +128,35 @@ const Dashboard = () => {
     const now = new Date();
     
     return sessionDate < now;
+  };
+
+  // Vérifier si une session peut être rejointe (5 min avant jusqu'à 30 min après)
+  const canJoinSession = (booking: Booking) => {
+    const now = new Date();
+    const [year, month, day] = booking.date.split('-').map(Number);
+    const [hours, minutes] = booking.time.split(':').map(Number);
+    
+    const sessionStart = new Date(year, month - 1, day, hours, minutes);
+    const sessionEnd = new Date(sessionStart);
+    
+    // Ajouter la durée de la session
+    if (booking.duration === '15min') {
+      sessionEnd.setMinutes(sessionEnd.getMinutes() + 15);
+    } else if (booking.duration === '30min') {
+      sessionEnd.setMinutes(sessionEnd.getMinutes() + 30);
+    } else if (booking.duration === 'hour') {
+      sessionEnd.setHours(sessionEnd.getHours() + 1);
+    }
+    
+    // Permettre d'accéder 5 minutes avant
+    const earlyAccess = new Date(sessionStart);
+    earlyAccess.setMinutes(earlyAccess.getMinutes() - 5);
+    
+    // Permettre d'accéder jusqu'à 30 minutes après la fin
+    const lateAccess = new Date(sessionEnd);
+    lateAccess.setMinutes(lateAccess.getMinutes() + 30);
+    
+    return now >= earlyAccess && now <= lateAccess;
   };
 
   // Filtrer les réservations en fonction de l'onglet actif
@@ -344,6 +373,16 @@ const Dashboard = () => {
                       )}
                       
                       <div className="booking-actions">
+                        {/* Bouton pour rejoindre la session vidéo */}
+                        {booking.status === 'confirmed' && canJoinSession(booking) && (
+                          <button 
+                            className="btn-join-session"
+                            onClick={() => navigate(`/video-session/${booking.id}`)}
+                          >
+                            <FontAwesomeIcon icon={faVideo} /> Rejoindre la session
+                          </button>
+                        )}
+                        
                         {!isPast && booking.status === 'confirmed' && (
                           <button 
                             className="btn-cancel"

@@ -10,6 +10,7 @@ import TutorProfile from './pages/TutorProfile'
 import BookSession from './pages/BookSession'
 import Dashboard from './pages/Dashboard'
 import TutorDashboard from './pages/TutorDashboard'
+import VideoSession from './pages/VideoSession'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
       <Route path="/book-session/:tutorId" element={<BookSession />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/tutor-dashboard" element={<TutorDashboard />} />
+      <Route path="/video-session/:bookingId" element={<VideoSession />} />
     </Routes>
   )
 }
