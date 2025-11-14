@@ -203,6 +203,56 @@
   margin-bottom: 20px;
 }
 
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--gray-300);
+}
+
+.divider span {
+  padding: 0 16px;
+  color: var(--gray-500);
+  font-size: 14px;
+}
+
+.google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  color: var(--black);
+  padding: 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.google-button:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-400);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.google-button:disabled {
+  background: var(--gray-50);
+  color: var(--gray-400);
+  cursor: not-allowed;
+  border-color: var(--gray-200);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

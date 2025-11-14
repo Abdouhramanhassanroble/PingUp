@@ -1,11 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { auth } from '../lib/firebase';
-import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { db } from '../lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   currentUser: User | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -40,6 +43,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await createUserWithEmailAndPassword(auth, email, password);
   }
 
+  async function signInWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+
+    // Vérifier si l'utilisateur existe déjà dans Firestore
+    const userDocRef = doc(db, "users", user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    // Si l'utilisateur n'existe pas, créer un profil de base
+    if (!userDocSnap.exists()) {
+      await setDoc(userDocRef, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || '',
+        photoURL: user.photoURL || null,
+        roles: [], // L'utilisateur devra compléter son profil
+        studentSubjects: [],
+        tutorSubjects: [],
+        bio: null,
+        availability: [],
+        createdAt: new Date(),
+        status: "active",
+      });
+    }
+  }
+
   async function logout() {
     await signOut(auth);
   }
@@ -48,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     currentUser,
     login,
     signup,
+    signInWithGoogle,
     logout
   };
 

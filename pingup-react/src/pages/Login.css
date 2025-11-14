@@ -119,6 +119,55 @@
   cursor: not-allowed;
 }
 
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #cbd5e0;
+}
+
+.divider span {
+  padding: 0 16px;
+  color: #718096;
+  font-size: 14px;
+}
+
+.google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  color: #2d3748;
+  padding: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.google-button:hover {
+  background: #f7fafc;
+  border-color: #a0aec0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.google-button:disabled {
+  background: #f7fafc;
+  color: #a0aec0;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+}
+
 .switch-form {
   text-align: center;
   margin-top: 16px;
