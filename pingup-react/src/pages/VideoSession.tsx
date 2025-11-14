@@ -7,8 +7,7 @@ import JitsiRoom from '../Jitsi/JitsiRoom';
 import Navbar from '../components/Navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faVideo, faVideoSlash, faMicrophone, faMicrophoneSlash,
-  faDesktop, faComments, faSignOutAlt, faUsers, faClock
+  faVideo, faVideoSlash, faSignOutAlt, faUsers, faClock
 } from '@fortawesome/free-solid-svg-icons';
 import './VideoSession.css';
 
